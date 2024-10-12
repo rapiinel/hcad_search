@@ -1,6 +1,7 @@
 import pandas as pd
 from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
+import glob
 import re
 
 def similar(search_str, target_str):
@@ -202,11 +203,24 @@ def extract_info(html):
     
     return info
 
+def remove_done_search(search_df, temp_directory):
+    files = glob.glob(f"{temp_directory}/*.csv")
+    if files:
+        temp_df = pd.concat([pd.read_csv(file) for file in files])
+        return search_df[~search_df['Key'].isin(temp_df['Realnex Key'].tolist())].reset_index(drop=True)
+    else:
+        return search_df
+
 def run(playwright, addresses_df):
     start_url = "https://search.hcad.org"
     chrome = playwright.chromium
     browser = chrome.launch()
     page = browser.new_page()
+    addresses_df = remove_done_search(addresses_df, 'temp')
+
+    print("---------------------------------------------------")
+    print(f"Total Number to be Searched: {addresses_df.shape[0]}")
+    print("---------------------------------------------------")
     
     results = []
 
