@@ -2,6 +2,7 @@ import pandas as pd
 from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
 import glob
+import os
 import re
 
 def similar(search_str, target_str):
@@ -202,12 +203,33 @@ def extract_info(html):
             f.write(html)
     
     return info
+def failed_search_log(row):
+    file_path = 'failed_search.csv'
+    new_row = pd.DataFrame([{
+            'Realnex Key':row['Key'],
+            'Search Address':row['Search Address']
+        }])
+    if not os.path.isfile(file_path):
+        print(f"{file_path} does not exist. Creating the log file")
+        new_row.to_csv(file_path, index=False)
+
+    else:
+        failed_search_df = pd.read_csv(file_path)
+        failed_search_df = pd.concat([failed_search_df, new_row], ignore_index=True)
+        failed_search_df.to_csv(file_path, index=False)
+
 
 def remove_done_search(search_df, temp_directory):
     files = glob.glob(f"{temp_directory}/*.csv")
+    
+    if os.path.isfile('failed_search.csv'):
+        failed_df = pd.read_csv('failed_search.csv')
+        search_df =  search_df[~search_df['Key'].isin(failed_df['Realnex Key'].tolist())].reset_index(drop=True)
+    
     if files:
         temp_df = pd.concat([pd.read_csv(file) for file in files])
-        return search_df[~search_df['Key'].isin(temp_df['Realnex Key'].tolist())].reset_index(drop=True)
+        search_df =  search_df[~search_df['Key'].isin(temp_df['Realnex Key'].tolist())].reset_index(drop=True)
+        return search_df
     else:
         return search_df
 
@@ -268,11 +290,13 @@ def run(playwright, addresses_df):
                     pd.DataFrame([info]).to_csv(f'temp/{row['Key']}.csv', index=False)
                     results.append(info)
                 else:
+                    failed_search_log(row)
                     print(f"No suitable match found for address: {address}")
                     continue
 
             except Exception as e:
                 print(f"An error occurred while processing address {address}: {str(e)}")
+                failed_search_log(row)
                 continue
         
         # Create DataFrame and save results
