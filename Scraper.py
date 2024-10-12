@@ -251,7 +251,7 @@ def run(playwright, addresses_df):
                     info['Account Number'] = str(account_number)
                     info['Search Keyword'] = address
                     info['Realnex Key'] = row['Key']
-                    pd.DataFrame([info]).to_csv(f'/mnt/d/data_enrichment_temp/{account_number}.csv', index=False)
+                    pd.DataFrame([info]).to_csv(f'temp/{row['Key']}.csv', index=False)
                     results.append(info)
                 else:
                     print(f"No suitable match found for address: {address}")
